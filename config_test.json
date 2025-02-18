@@ -1,6 +1,6 @@
 {
   "players_per_game": 3,
-  "test_granted": [],
+  "test_granted": ["Infection","Last stand","The thing","Flamethrower","Infection"],
   "cards": [
     {
       
@@ -60,7 +60,7 @@
       "name": "Armor" ,
       "name_displayed": "Броня",
       "description": "TBD. Избегите любой смертельной опасности сбросив эту карту. Возьмите из колоды новую взамен.",
-      "count": 3,
+      "count": 5,
       "image": "armor.png",
       "is_reactable": true
     }
@@ -70,7 +70,7 @@
       "name": "Blood Sample" ,
       "name_displayed": "Анализ крови",
       "description": "TBD clear flag on exchange. Посмотреть все карты одного из соседних игроков. Карты увидете только вы.",
-      "count": 2,
+      "count": 3,
       "image": "bloodtest.png",
       "is_playable": true,
       "require_player_lock": true,
@@ -94,7 +94,7 @@
       "name": "Delirium" ,
       "name_displayed": "Нервный срыв",
       "description": "Вы доводите себя до нервного срыва. Карта играется на себя. Вы раскрываете свои карты остальным игрокам до конца хода. TBD другие игроки не видят картинки.",
-      "count": 2,
+      "count": 3,
       "image": "delirium.png",
       "is_playable": true
     }
@@ -104,7 +104,7 @@
       "name": "Signal rocket" ,
       "name_displayed": "Сигнальная ракета",
       "description": "Запустить сигнальную ракету, поменяв направление игры. Карта играется на себя. Ваш ход продолжается.",
-      "count": 3,
+      "count": 5,
       "image": "alarm.png",
       "is_playable": true
     },
@@ -113,7 +113,7 @@
       "name": "Swap" ,
       "name_displayed": "Не та дверь.",
       "description": "Поменяться местами с одним из соседних игроков. Ход сохраняется за вами. TBD почему-то потом обмен проходит почти в авто-режиме.",
-      "count": 2,
+      "count": 5,
       "image": "swap.png",
       "is_playable": true,
       "neighbours_only": true,
@@ -143,7 +143,7 @@
       "name": "Signs" ,
       "name_displayed": "Сталкинг" ,
       "description": "TBD. Обменяться картами с произвольным игроком вместо соседнего. Очередность хода сохраняется.",
-      "count": 5,
+      "count": 20,
       "image": "stalking.png",
       "is_playable": true,
       "require_player_lock": true
@@ -163,7 +163,7 @@
       "name": "Talk Out" ,
       "name_displayed": "Манипуляция",
       "description": "Сыграйте эту карту вместо обмена. Откажитесь от обмена. Посмотрите карту, которую вам хотели передать. Возьмите из колоды новую карту вместо сыгранной.",
-      "count": 5,
+      "count": 10,
       "image": "talk-out.png",
       "is_reactable": true,
       "is_playable": false
@@ -173,7 +173,7 @@
       "name": "Necronomicon" ,
       "name_displayed": "Некрономикон",
       "description": "Сыграйте эту карту чтобы отменить любое действие направленное на вас, обмен или карту. Возьмите из колоды новую карту вместо сыгранной.",
-      "count": 1,
+      "count": 5,
       "image": "necronomicon.png",
       "is_reactable": true,
       "is_playable": false

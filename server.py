@@ -197,6 +197,7 @@ class Player:
     def check_forced_discards(self):
         if len(self.hand) > 4:
             return False
+        self.is_forced_discards = False
         return True
 
 
@@ -293,8 +294,8 @@ class CrossRelations:
         card1, card2 = player_1.extract_selected_card(
             player_1_cidx
         ), player_2.extract_selected_card(player_2_cidx)
-        player_1.append_card(card2)
-        player_2.append_card(card1)
+        player_1.append_card(card2, from_deck = False)
+        player_2.append_card(card1, from_deck = False)
 
     def extract_selected_card(self, player_1):
         player_1_name = player_1.nickname
@@ -372,7 +373,16 @@ class Game:
             for player in self.players:
                 if not self.deck:
                     self.reshuffle_deck()
-                player.append_card(self.deck.pop())
+                if self.config["test_granted"]:
+                    granted = self.config["test_granted"].pop()
+                    granted_in_deck = [_ for _ in self.deck if _.name == granted]
+                    if granted_in_deck:
+                        player.append_card(self.deck.pop(self.deck.index(granted_in_deck[0])))
+                    else:
+                        player.append_card(self.deck.pop())
+                else:
+                    player.append_card(self.deck.pop())
+
         self.current_player_index = random.randint(0, len(self.players) - 1)
         self.phase = "draw"
         return True
@@ -631,9 +641,11 @@ class Game:
             if player != current_player:
                 return
 
-            if not self.deck:
-                self.reshuffle_deck()
-            current_player.append_card(self.deck.pop())
+            while(len(current_player.hand)) < 5:
+                
+                if not self.deck:
+                    self.reshuffle_deck()
+                current_player.append_card(self.deck.pop())
 
             current_player.process_turn_effects()
             self.phase = "action"
@@ -874,9 +886,10 @@ class Game:
                 return
             elif action.get("action") == "confirm":
 
-                if source_card_name == "Flamethrower":
+                if source_card_name in ["Flamethrower", "Sniper rifle"]:
+                    # self.post_action_stack = [card.name,current_player.nickname,target_player]
                     # self.post_action_stack = [card.name, target_player]
-                    self.post_action_stack[1].is_dead = True
+                    self.post_action_stack[2].is_dead = True
                 elif source_card_name == "Bondage":
                     # self.post_action_stack = [card.name, target_player, 3]
                     self.post_action_stack[1].is_tranquilised = 3
@@ -1061,80 +1074,247 @@ async def broadcast_game_state(game):
 async def websocket_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
-    game = request.app["game"]
+    request.app["connections"].add(ws)
+    game = request.app["game"] #???
     player = None
 
-    async for msg in ws:
-        if msg.type == aiohttp.WSMsgType.TEXT:
-            data = json.loads(msg.data)
-            if data["type"] == "login":
-                nickname = data["nickname"]
-                existing = next(
-                    (p for p in game.players if p.nickname == nickname), None
-                )
-                if existing:
-                    if existing.is_active:
-                        if not existing.ws.closed:
-                            await ws.send_json(
-                                {"type": "error", "message": "Name taken"}
-                            )
-                            continue
+    try:
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                data = json.loads(msg.data)
+                if data["type"] == "login":
+                    nickname = data["nickname"]
+                    existing = next(
+                        (p for p in game.players if p.nickname == nickname), None
+                    )
+                    if existing:
+                        if existing.is_active:
+                            if not existing.ws.closed:
+                                await ws.send_json(
+                                    {"type": "error", "message": "Name taken"}
+                                )
+                                continue
+                        else:
+                            existing.ws = ws
+                            existing.is_active = True
+                            player = existing
                     else:
-                        existing.ws = ws
-                        existing.is_active = True
-                        player = existing
-                else:
-                    player = Player(nickname, ws)
-                    if not game.add_player(player):
-                        await ws.send_json({"type": "error", "message": "Game full"})
-                        continue
-                await broadcast_game_state(game)
-                if (
-                    len(game.players) == game.config["players_per_game"]
-                    and game.phase == "waiting"
-                ):
-                    print("Starting game. Players connected.")
-                    game.start_game()
+                        player = Player(nickname, ws)
+                        if not game.add_player(player):
+                            await ws.send_json({"type": "error", "message": "Game full"})
+                            continue
                     await broadcast_game_state(game)
-                    print(f"Phase: {game.phase}")
-            elif data["type"] == "action":
-                await game.process_action(player, data)
-                await broadcast_game_state(game)
-            elif data["type"] == "client_log":  # Add this handler
-                logging.info(f"CLIENT LOG: {data['message']}")
+                    if (
+                        len(game.players) == game.config["players_per_game"]
+                        and game.phase == "waiting"
+                    ):
+                        print("Starting game. Players connected.")
+                        game.start_game()
+                        await broadcast_game_state(game)
+                        print(f"Phase: {game.phase}")
+                elif data["type"] == "action":
+                    await game.process_action(player, data)
+                    await broadcast_game_state(game)
+                elif data["type"] == "client_log":  # Add this handler
+                    logging.info(f"CLIENT LOG: {data['message']}")
+    except Exception as e:
+        print(f"Crash: {e}")
+        await request.app.restart_game()
+    finally:
+        request.app["connections"].discard(ws)
+    return ws        
 
     if player:
         player.is_active = False
         await broadcast_game_state(game)
     return ws
 
+async def restart_handler(request):
+    await request.app.restart_game()
+    return web.Response(text="Game restarted!")
+
+async def update_config_handler(request):
+    if request.method == "POST":
+        data = await request.post()
+        new_config_file = data["config_file"].file.read()
+        try:
+            new_config = json.loads(new_config_file)
+            request.app["config"] = new_config
+            await request.app.restart_game()
+            return web.Response(text="Config updated!")
+        except json.JSONDecodeError:
+            return web.Response(text="Invalid JSON!", status=400)
+    html = """
+    <form method="post" enctype="multipart/form-data">
+      <input type="file" name="config_file">
+      <button>Update Config</button>
+    </form>
+    """
+    return web.Response(text=html, content_type="text/html")
+
 
 # Add this handler before static routes
 async def index_handler(request):
     return web.FileResponse("./static/index.html")
 
+async def restart_game(app):
+    for ws in set(app["connections"]):
+        await ws.close(code=1001, message=b"Restarting")
+    app["connections"].clear()
+    app["game"] = Game(app["config"])
+
+
+async def control_panel_page(request):
+    """Regular HTTP handler to serve the control panel HTML"""
+    return web.Response(
+        text=control_panel_html,
+        content_type="text/html"
+    )
+
+async def control_panel_ws(request):
+    """WebSocket handler for actual communication"""
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+    
+    async for msg in ws:
+        if msg.type == web.WSMsgType.TEXT:
+            try:
+                data = json.loads(msg.data)
+                app = request.app
+                
+                if data['command'] == 'restart':
+                    await app.restart_game()
+                    await ws.send_json({"message": "Game restarted!"})
+                    
+                elif data['command'] == 'upload_config':
+                    new_config = json.loads(data['config'])
+                    app["config"] = {**app["config"], **new_config}
+                    await app.restart_game()
+                    await ws.send_json({"message": "Config updated & restarted!"})
+                    
+                elif data['command'] == 'set_players':
+                    count = int(data['count'])
+                    if count >= 2:
+                        app["config"]["players_per_game"] = count
+                        await app.restart_game()
+                        await ws.send_json({
+                            "message": f"Set to {count} players & restarted!"
+                        })
+                        
+            except Exception as e:
+                await ws.send_json({"message": f"Error: {str(e)}"})
+    
+    return ws
+
+# Updated HTML template with correct WebSocket URL
+control_panel_html = """ <html>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .panel { display: grid; gap: 10px; max-width: 400px; }
+        button, input { padding: 8px; }
+        #status { color: #666; margin-top: 10px; }
+    </style>
+    <div class="panel">
+        <button onclick="sendCommand('restart')">Restart Game</button>
+        
+        <div>
+            <input type="file" id="configFile" hidden 
+                   onchange="readConfig(this)">
+            <button onclick="document.getElementById('configFile').click()">
+                Upload Config
+            </button>
+        </div>
+        
+        <div>
+            <label>Players per game: </label>
+            <input type="number" id="playersInput" value="2" min="2">
+            <button onclick="updatePlayers()">Apply</button>
+        </div>
+        
+        <div id="status"></div>
+    </div>
+    <script>
+        const ws = new WebSocket(`ws://${window.location.host}/control_panel_ws`);
+        
+        function sendCommand(cmd, data={}) {
+            ws.send(JSON.stringify({command: cmd, ...data}));
+        }
+        
+        function readConfig(input) {
+            const file = input.files[0];
+            const reader = new FileReader();
+            reader.onload = () => {
+                sendCommand('upload_config', {config: reader.result});
+            };
+            reader.readAsText(file);
+        }
+        
+        function updatePlayers() {
+            const value = parseInt(document.getElementById('playersInput').value);
+            if (value >= 2) {
+                sendCommand('set_players', {count: value});
+            }
+        }
+        
+        ws.onmessage = (event) => {
+            const response = JSON.parse(event.data);
+            document.getElementById('status').innerHTML = response.message;
+        };
+    </script>
+    </html>
+    """
+
+
+
+def load_config():
+    try:
+        with open("config.json", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {"default": "config"}
 
 def main():
-    with open("config.json", encoding="utf-8") as f:
-        config = json.load(f)
+    
 
     if not os.path.exists("static"):
         os.makedirs("static")
 
     app = web.Application()
-    app["game"] = Game(config)
+    app["connections"] = set()
+    app["config"] = load_config()
+    app["game"] = Game(app["config"])
+    app.restart_game = lambda: restart_game(app)
 
     # Add explicit index handler
     app.router.add_get("/", index_handler)
-
-    # WebSocket route
     app.router.add_get("/ws", websocket_handler)
-
-    # Serve static files under different prefix
+    app.router.add_get("/control_panel", control_panel_page)  # Regular HTTP
+    app.router.add_get("/control_panel_ws", control_panel_ws)  # WebSocket
+    app.router.add_get("/restart", restart_handler)
+    app.router.add_route("*", "/update_config", update_config_handler)
     app.router.add_static("/static/", "static")
+
 
     web.run_app(app, port=8080)
 
 
 if __name__ == "__main__":
     main()
+
+
+#Could become less than 2 cards on hand, somehow agility - exchange selected
+#Thing player play button missing +++
+#necronomicon not avoiding exchanges
+#human player cannot give infection +++
+#confirm flamethrower server fault +++
+
+
+#  File "/opt/render/project/src/.venv/lib/python3.11/site-packages/aiohttp/web_app.py", line 567, in _handle
+#     return await handler(request)
+#            ^^^^^^^^^^^^^^^^^^^^^^
+#   File "/opt/render/project/src/server.py", line 1101, in websocket_handler
+#     await game.process_action(player, data)
+#   File "/opt/render/project/src/server.py", line 879, in process_action
+#     self.post_action_stack[1].is_dead = True
+#     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# AttributeError: 'str' object has no attribute 'is_dead' +++++++
