@@ -11,7 +11,7 @@
     grid-template-rows: repeat(3, 1fr);
     width: 100vw;
     height: 100vh;
-    background: #2d5a2d;
+    background: #06BC6D;
     position: fixed;
     top: 0;
     left: 0;
@@ -73,7 +73,6 @@
     width: 60px;
     height: 90px;
     border: 2px solid #333;
-    background: white;
     flex-shrink: 0;
     display: flex;
     justify-content: center;
@@ -85,7 +84,7 @@
 }
 
 .card.selected {
-    transform: translateY(-5px);
+    transform: translateY(-5px) scale(1.3);
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
@@ -104,7 +103,7 @@
     font-size: 12px;
     border: none;
     border-radius: 4px;
-    background: #4CAF50;
+    background: #F2C1AE;
     color: white;
     cursor: pointer;
     flex-shrink: 0;
@@ -175,8 +174,8 @@
 
 
 .player-area.active {
-    border-color: #4CAF50;
-    box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+    border-color: #F2C1AE;
+    box-shadow: 0 0 15px #134254;
 }
 
 .player-area.frozen {
@@ -194,7 +193,6 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    background: white;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -277,10 +275,12 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    font-size: 40px;
+    font-size: 200px;
     color: gold;
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
     transform-origin: center;
+    opacity: 0.2;
+    
 }
 
 .player-name {
@@ -313,8 +313,9 @@
     font-size: 0.8em;
     color: #666;
     padding: 0 5px;
-    background-color: white;
-    border-radius: 5px;
+    background-color: #666;
+    background: transparent;
+    border-radius: 4px;
 }
 
 
@@ -335,8 +336,8 @@
 
 /* Card sizing update */
 .card {
-    width: 80px;  /* Increased from 60px */
-    height: 120px;  /* Increased from 90px */
+    width: 100px;  /* Increased from 60px */
+    height: 100px;  /* Increased from 90px */
     font-size: 14px;  /* Larger text */
 }
 

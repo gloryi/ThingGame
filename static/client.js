@@ -3,6 +3,8 @@ let ws = null;
 let gameState = null;
 let selectedCardIndex = null;
 let selectedTarget = null;
+let lang = "Ru";
+
 
 // Helper to send logs to server (+ server.py needs LOG_HANDLER)
 function logToServer(message) {
@@ -107,8 +109,9 @@ function getDiscardText(state) {
 function updateDirectionArrow(state) {
     const arrow = document.getElementById('direction-arrow');
     if (arrow) {
-        const rotation = state.direction === 1 ? -1 : 180;
-        arrow.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
+        // arrow.innerText = "⟳";
+        arrow.innerText = state.direction === 1 ? "↻" : "↺";
+        // arrow.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
     }
 }
 
@@ -133,10 +136,12 @@ function createPlayerElement(state, player, index, currentPlayerIndex, hand, is_
     Object.assign(playerEl.style, positions[index % 8]);
     
     // Player content
+    logToServer(player.nickname + ' lock exchange: ' + player.lock_exchange)
     playerEl.innerHTML = `
-    <div class="player-content" ${selected_target === player.nickname ? 'style="background-color:red;"' : ''} ${is_self && player.is_infected ? 'style="background-color:purple;"' : ''} ${is_self && player.is_thing ? 'style="background-color:black;"' : ''}>
+    <div class="player-content" ${selected_target === player.nickname ? 'style="background-color:#6683D9;"' : ''} ${is_self && player.is_infected ? 'style="background-color:#0BD9C4;"' : ''} ${is_self && player.is_thing ? 'style="background-color:#134254;"' : ''}>
         <div class=${player.is_targeted? "player-name" : "player-name-target"}>
         ${player.is_dead ? player.nickname + ' is Dead' : player.nickname}
+        ${player.lock_exchange ? ' +++' : ''}
         ${is_self && player.is_infected ? ' Infected' : ''}
         ${is_self && player.is_thing ? ' Thing' : ''}
         ${player.is_tranquilised>0? ' Tied up' : ''}</div>
@@ -167,6 +172,7 @@ function renderPlayerHand(state, player, index, hand, is_self, self_name) {
         // player lock_exchan
         var selected_card = state.cs.pl_cd[player.nickname];
         return hand.map((card, idx) => `
+        <div class="card">
             <div class="card ${idx === selected_card ? 'selected' : ''}" 
                  data-idx="${idx}"
                  onclick="handleCardClick(${idx})"
@@ -184,8 +190,8 @@ function renderPlayerHand(state, player, index, hand, is_self, self_name) {
                  ${(gameState.phase === 'post-action') && card.is_reactable && idx === selected_card ? 'style="border-color:green;border-width:thick;"' : ''}
 
                  >
-                <div class="card-name">${card.name_displayed}</div>
-            </div>
+                
+            </div><div class="card-name">${card.name_displayed}</div></div>
         `).join('');
     } else {
         // logToServer(hand);
@@ -201,6 +207,63 @@ function renderPlayerHand(state, player, index, hand, is_self, self_name) {
     }
 }
 
+// function localise(message){
+//     logToServer(message);
+//         switch(message) {
+//             case 'Confirm':
+//                 if(lang==="Ru"){
+//                     return "Подтвердить";
+//                 } else {
+//                     return message;
+//                 };
+//                 case 'Draw Card':
+//                     if(lang==="Ru"){
+//                         return "Взять карту";
+//                     } else {
+//                         return message;
+//                     };
+//                 case 'Play Selected':
+//                         if(lang==="Ru"){
+//                             return "Сыграть карту";
+//                         } else {
+//                             return message;
+//                         };
+//                 case 'Discard Selected':
+//                             if(lang==="Ru"){
+//                                 return "Сбросить карту";
+//                             } else {
+//                                 return message;
+//                             };
+//             default:
+//                 return message;
+//         }
+
+// };
+
+
+const translations = {
+    "Ru": {
+        'Confirm': 'Подтвердить',
+        'Draw Card': 'Взять карту',
+        'Play Selected':'Сыграть карту',
+        'Discard Selected':'Сбросить карту',
+        'React with selected':'Отреагировать картой'
+
+    },
+    // Add more languages as needed
+};
+
+function localise(message) {
+    logToServer(message);
+
+    // Get the translations for the current language
+    const langTranslations = translations[lang] || {};
+
+    // Return the translated message or the original if not found
+    return langTranslations[message] || message;
+}
+
+
 function renderActionButtons(is_self, is_current, is_targeted, is_dead, is_tranquilised, is_forced_discards) {
     if(is_dead){
         return '<div>---</div>';
@@ -209,22 +272,22 @@ function renderActionButtons(is_self, is_current, is_targeted, is_dead, is_tranq
     return `
         <div class="action-buttons">
         ${gameState.phase === 'draw' && is_current ?
-        `<button onclick="handleAction('draw')" >Draw Card</button>` : ''}
+        `<button onclick="handleAction('draw')" >${localise('Draw Card')}</button>` : ''}
         
         ${gameState.phase === 'post-action' && is_targeted && ! is_current ?
-            `<button onclick="handleAction('confirm')" >Confirm</button>` : ''}
+            `<button onclick="handleAction('confirm')" >${localise('Confirm')}</button>` : ''}
 
         ${gameState.phase === 'post-action' && is_targeted && ! is_current ?
-            `<button onclick="handleAction('react')" >React with selected</button>` : ''}            
+            `<button onclick="handleAction('react')" >${localise('React with selected')}</button>` : ''}            
 
         ${gameState.phase === 'action' && is_current && is_tranquilised <=0 && !is_forced_discards?
-        `<button onclick="handleAction('play')" > Play Selected</button>` : ''}
+        `<button onclick="handleAction('play')" >${localise('Play Selected')}</button>` : ''}
         
         ${gameState.phase === 'action' && is_current ?
-        `<button onclick="handleAction('discard')"> Discard Selected</button>` : ''}
+        `<button onclick="handleAction('discard')">${localise('Discard Selected')}</button>` : ''}
         
         ${gameState.phase === 'exchange' && (is_targeted || is_current) ? `
-            <button onclick="handleAction('exchange')">Exchange Selected</button>
+            <button onclick="handleAction('exchange')">${localise('Exchange Selected')}</button>
             ` : ''}
         
         ${gameState.phase === 'exchange' && (is_targeted) ? `

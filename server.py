@@ -153,7 +153,7 @@ class Player:
         self.hand.append(card)
         if card.name == "The thing":
             self.is_thing = True
-        if card.name == "Infection" and not from_deck:
+        if card.name == "Infection" and not from_deck and not self.is_thing:
             self.is_infected = True
 
     def process_turn_effects(self):
@@ -206,7 +206,7 @@ class CrossRelations:
         self.pl_pl_relations = {}
         self.pl_cd_relations = {}
 
-    def add_relation_pl_pl(self, player_1, player_3, is_reflective=False):
+    def add_relation_pl_pl(self, player_1, player_3, is_reflective=False, is_free_selection = True):
         player_1_name = player_1.nickname
         player_2_name = (
             self.pl_pl_relations[player_1_name]
@@ -214,6 +214,10 @@ class CrossRelations:
             else ""
         )
         player_3_name = player_3.nickname
+
+        if not is_free_selection:
+            if player_1_name in self.pl_pl_relations and player_3_name in self.pl_pl_relations:
+                return
 
         # p1-# => p2 is None. if p3-* => p3-#; p1->p3 p3->p1,
         # p1-p2. p2-p1. p1-# p2-#. if p3-* p3-#. p1-p3 p3-p1
@@ -527,7 +531,11 @@ class Game:
 
         all_infected = True
         for player in self.players:
-            if not player.is_infected and not player.is_thing and not player.is_dead:
+            if player.is_dead:
+                continue
+            if player.is_thing:
+                continue
+            if not player.is_infected:
                 all_infected = False
 
         if all_infected:
@@ -552,7 +560,6 @@ class Game:
                 and player_2.is_thing
             )
         ):
-            player.lock_exchange = True
             return True
 
         else:
@@ -571,8 +578,21 @@ class Game:
         next_player = self.get_next_player(self.current_player_index, self.direction)
 
         self.cross.add_relation_pl_pl(current_player, next_player)
+
         # TODO: ???
         # logging.info(f"Exchange pair {current_player.nickname} x {self.cross.pl_pl_relations[current_player.nickname]}")
+        
+        
+        if (
+            not next_player.could_exchange()
+            or not current_player.could_exchange()
+            ):
+            self.current_player_index = self.get_next_player_index(
+                self.current_player_index, self.direction
+            )
+            self.phase = "draw"
+            self.end_turn_clean()
+            self.post_action_stack = []
 
     def end_turn_clean(self):
         self.cross.end_turn_clean(soft=False)
@@ -586,11 +606,18 @@ class Game:
 
     async def process_action(self, player, action):
 
+        #No point in calculating anything if it's already ended
+        game_ended, end_type = self.is_game_ended()
+        if game_ended:
+            self.phase = end_type
+            return
+
+
         current_player = self.players[self.current_player_index]
         next_player = self.get_next_player(self.current_player_index, self.direction)
 
         if self.phase == "exchange":
-            self.cross.add_relation_pl_pl(current_player, next_player)
+            self.cross.add_relation_pl_pl(current_player, next_player, is_free_selection = False)
         prev_player = self.get_next_player(
             self.current_player_index, -1 * self.direction
         )
@@ -623,6 +650,7 @@ class Game:
         # pl_cd somehow to dict on sending to front
         if action.get("action") == "card_selection":
             self.cross.add_relation_pl_cd(player, action.get("card_idx"))
+            player.lock_exchange = False
             return
             # TODO important moment for working for now both versions
             # if player.lock_exchange:
@@ -631,7 +659,7 @@ class Game:
 
         # TODO Add indication || Rules of possibility or disability to exchange
         if self.phase == "exchange" and action.get("action") in ["exchange", "react"]:
-            self.cross.add_relation_pl_pl(current_player, next_player)
+            self.cross.add_relation_pl_pl(current_player, next_player, is_free_selection = False)
             # For basic exchange only
             pass
 
@@ -945,7 +973,7 @@ class Game:
                 )
                 return
 
-        elif self.phase == "exchange":
+        elif self.phase == "exchange": ########################################### EXCHANGE
 
             if action["action"] == "react":
 
@@ -988,39 +1016,36 @@ class Game:
                 is_turn_ended = True
 
             elif action["action"] == "exchange":
+                if not player.nickname in [
+                    current_player.nickname,
+                    next_player.nickname,
+                    ]:
+                    return
                 # if player.preferred_target:
                 #     self.cross.add_relation_pl_pl(player, next_player)
-                if (
-                    not next_player.could_exchange()
-                    or not current_player.could_exchange()
-                ):
-                    logging.info(f"Some of players cannot exchange")
-                    is_turn_ended = True
+                if player.lock_exchange:
+                    player.lock_exchange = False
                 else:
+                    player.lock_exchange = True
 
-                    if not player.nickname in [
-                        current_player.nickname,
-                        next_player.nickname,
-                    ]:
-                        return
 
-                    if not self.is_basic_exchange_possible(
-                        player, current_player, next_player
+                if not self.is_basic_exchange_possible(
+                    player, current_player, next_player
                     ):
-                        self.end_turn_error(player, "Exchange conditions are not met")
-                        return
+                    self.end_turn_error(player, "Exchange conditions are not met")
+                    return
 
                     # print(current_player.to_dict)
                     # print(next_player.to_dict())
 
-                    current_card, next_card = self.cross.get_selected_card(
-                        current_player
+                current_card, next_card = self.cross.get_selected_card(
+                    current_player
                     ), self.cross.get_selected_card(next_player)
-                    if not current_card is None and not next_card is None:
-                        if current_player.lock_exchange and next_player.lock_exchange:
-                            self.cross.exchange_cards(current_player, next_player)
-                            # a, b = current_player.hand.pop(current_card), next_player.hand.pop(next_card)
-                            is_turn_ended = True
+                if not current_card is None and not next_card is None:
+                    if current_player.lock_exchange and next_player.lock_exchange:
+                        self.cross.exchange_cards(current_player, next_player)
+                        # a, b = current_player.hand.pop(current_card), next_player.hand.pop(next_card)
+                        is_turn_ended = True
 
             else:
                 action_type = action["action"]
