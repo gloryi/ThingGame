@@ -25,7 +25,7 @@ class Card:
         self.name = name
         self.description = description
         self.discard_face_down = True
-        print(f"{self.id} |", end = " | ")
+        print(f"{self.id} |", end=" | ")
 
     def play(self, game, player):
         """To be overridden by subclasses"""
@@ -170,7 +170,6 @@ class Player:
             self.is_dead = True
             for c in self.hand:
                 c.show_to = ["all"]
-        
 
     def could_exchange(self):
         if self.is_tranquilised:
@@ -203,12 +202,12 @@ class Player:
             return self.hand.pop(idx)
         else:
             return self.hand.pop(self.__selected_card)
-    
+
     def extract_card_id(self, idx, drop=False):
         selected_card, I = None, 0
         print("Selecting by id")
         for i, c in enumerate(self.hand):
-            print(c.id, end = " ")
+            print(c.id, end=" ")
             print
             if c.id == idx:
                 selected_card = c
@@ -218,7 +217,7 @@ class Player:
                 I = i
                 print()
                 break
-        
+
         print(f"Selected card {selected_card}")
         if not selected_card:
             print(f"Selected by id is None -- {idx}")
@@ -227,7 +226,7 @@ class Player:
         if drop:
             print("Dropping")
             return self.hand.pop(I)
-        
+
         print(f"Returning {selected_card}")
 
         return selected_card
@@ -235,7 +234,7 @@ class Player:
     def shuffle_hand(self):
         random.shuffle(self.hand)
         self.end_turn_clean()
-    
+
     def is_cards_left(self):
         return len(self.hand) > 0
 
@@ -251,7 +250,9 @@ class CrossRelations:
         self.pl_pl_relations = {}
         self.pl_cd_relations = {}
 
-    def add_relation_pl_pl(self, player_1, player_3, is_reflective=False, is_free_selection = True):
+    def add_relation_pl_pl(
+        self, player_1, player_3, is_reflective=False, is_free_selection=True
+    ):
         player_1_name = player_1.nickname
         player_2_name = (
             self.pl_pl_relations[player_1_name]
@@ -261,7 +262,10 @@ class CrossRelations:
         player_3_name = player_3.nickname
 
         if not is_free_selection:
-            if player_1_name in self.pl_pl_relations and player_3_name in self.pl_pl_relations:
+            if (
+                player_1_name in self.pl_pl_relations
+                and player_3_name in self.pl_pl_relations
+            ):
                 return
 
         # p1-# => p2 is None. if p3-* => p3-#; p1->p3 p3->p1,
@@ -343,8 +347,8 @@ class CrossRelations:
         card1, card2 = player_1.extract_selected_card(
             player_1_cidx
         ), player_2.extract_selected_card(player_2_cidx)
-        player_1.append_card(card2, from_deck = False)
-        player_2.append_card(card1, from_deck = False)
+        player_1.append_card(card2, from_deck=False)
+        player_2.append_card(card1, from_deck=False)
         return [player_1.nickname, card2.id, player_2.nickname, card1.id]
 
     def extract_selected_card(self, player_1):
@@ -384,7 +388,7 @@ class Game:
         self.deck = []
         card_id = 0
         card_class = BasicCard
-        #generate_cards
+        # generate_cards
         # initial_cards = []
         for card_name in self.config["deck_composition"]:
             for n in range(self.config["deck_composition"][card_name]):
@@ -432,7 +436,9 @@ class Game:
                     granted = test_cards.pop()
                     granted_in_deck = [_ for _ in self.deck if _.name == granted]
                     if granted_in_deck:
-                        player.append_card(self.deck.pop(self.deck.index(granted_in_deck[0])))
+                        player.append_card(
+                            self.deck.pop(self.deck.index(granted_in_deck[0]))
+                        )
                     else:
                         player.append_card(self.deck.pop())
                 else:
@@ -565,25 +571,37 @@ class Game:
                     return False
 
             if self.cross.get_selected_card(player).name == "Ye":
-                if not self.exchange_stack or player.nickname not in self.exchange_stack or not len(self.exchange_stack) == 4:
+                if (
+                    not self.exchange_stack
+                    or player.nickname not in self.exchange_stack
+                    or not len(self.exchange_stack) == 4
+                ):
                     self.end_turn_error(
-                        player, f"{player.nickname} not in exchange stack or exchange stack is empty"
+                        player,
+                        f"{player.nickname} not in exchange stack or exchange stack is empty",
                     )
                     return False
-            
-                card1, card2 = self.get_by_nickname(self.exchange_stack[0]).extract_card_id(self.exchange_stack[1],drop = False), self.get_by_nickname(self.exchange_stack[2]).extract_card_id(self.exchange_stack[3], drop = False)
+
+                card1, card2 = self.get_by_nickname(
+                    self.exchange_stack[0]
+                ).extract_card_id(
+                    self.exchange_stack[1], drop=False
+                ), self.get_by_nickname(
+                    self.exchange_stack[2]
+                ).extract_card_id(
+                    self.exchange_stack[3], drop=False
+                )
 
                 if not card1 or not card2:
                     logging.info(
                         f"Some wrong {self.get_by_nickname(self.exchange_stack[0]).nickname} or {self.get_by_nickname(self.exchange_stack[2]).nickname} cannot return exchanged cards, some of cards None, lol"
                     )
-                    return False         
+                    return False
                 if card1.name == "Infection" or card2.name == "Infection":
                     logging.info(
                         f"Some wrong {self.get_by_nickname(self.exchange_stack[0]).nickname} or {self.get_by_nickname(self.exchange_stack[2]).nickname} cannot return exchanged cards"
                     )
                     return False
-
 
         if (
             action_type == "discard"
@@ -654,12 +672,8 @@ class Game:
 
         # TODO: ???
         # logging.info(f"Exchange pair {current_player.nickname} x {self.cross.pl_pl_relations[current_player.nickname]}")
-        
-        
-        if (
-            not next_player.could_exchange()
-            or not current_player.could_exchange()
-            ):
+
+        if not next_player.could_exchange() or not current_player.could_exchange():
             self.current_player_index = self.get_next_player_index(
                 self.current_player_index, self.direction
             )
@@ -682,18 +696,19 @@ class Game:
 
     async def process_action(self, player, action):
 
-        #No point in calculating anything if it's already ended
+        # No point in calculating anything if it's already ended
         game_ended, end_type = self.is_game_ended()
         if game_ended:
             self.phase = end_type
             return
 
-
         current_player = self.players[self.current_player_index]
         next_player = self.get_next_player(self.current_player_index, self.direction)
 
         if self.phase == "exchange":
-            self.cross.add_relation_pl_pl(current_player, next_player, is_free_selection = False)
+            self.cross.add_relation_pl_pl(
+                current_player, next_player, is_free_selection=False
+            )
         prev_player = self.get_next_player(
             self.current_player_index, -1 * self.direction
         )
@@ -735,7 +750,9 @@ class Game:
 
         # TODO Add indication || Rules of possibility or disability to exchange
         if self.phase == "exchange" and action.get("action") in ["exchange", "react"]:
-            self.cross.add_relation_pl_pl(current_player, next_player, is_free_selection = False)
+            self.cross.add_relation_pl_pl(
+                current_player, next_player, is_free_selection=False
+            )
             # For basic exchange only
             pass
 
@@ -745,8 +762,8 @@ class Game:
             if player != current_player:
                 return
 
-            while(len(current_player.hand)) < 5:
-                
+            while (len(current_player.hand)) < 5:
+
                 if not self.deck:
                     self.reshuffle_deck()
                 current_player.append_card(self.deck.pop())
@@ -779,23 +796,34 @@ class Game:
             if action["action"] == "play":
                 card.discard_face_down = False
                 card.show_to = []
-                self.discard_pile.append(card) 
+                self.discard_pile.append(card)
                 # hardcoded
                 if card.name == "Signal rocket":
                     self.direction = self.direction * -1
                     self.set_exchange_phase()
                     return
-                
+
                 elif card.name == "Ye":
-                    
+
                     # target_player = self.get_by_nickname(self.exchange_stack[2])
-                    card1, card2 = self.get_by_nickname(self.exchange_stack[0]).extract_card_id(self.exchange_stack[1],drop = True), self.get_by_nickname(self.exchange_stack[2]).extract_card_id(self.exchange_stack[3], drop = True)
-                    
-                    self.get_by_nickname(self.exchange_stack[0]).append_card(card2, from_deck = False)
-                    self.get_by_nickname(self.exchange_stack[2]).append_card(card1, from_deck = False)
+                    card1, card2 = self.get_by_nickname(
+                        self.exchange_stack[0]
+                    ).extract_card_id(
+                        self.exchange_stack[1], drop=True
+                    ), self.get_by_nickname(
+                        self.exchange_stack[2]
+                    ).extract_card_id(
+                        self.exchange_stack[3], drop=True
+                    )
+
+                    self.get_by_nickname(self.exchange_stack[0]).append_card(
+                        card2, from_deck=False
+                    )
+                    self.get_by_nickname(self.exchange_stack[2]).append_card(
+                        card1, from_deck=False
+                    )
                     self.set_exchange_phase()
                     return
-
 
                 elif card.name == "Signs":
                     target_player = self.get_by_nickname(self.cross.get_target(player))
@@ -860,7 +888,7 @@ class Game:
                     self.post_action_stack = [card.name, target_player, 3]
                     self.phase = "post-action"
                     return
-                
+
                 elif card.name == "Reanimate":
                     target_player = self.get_by_nickname(self.cross.get_target(player))
                     if not target_player.is_dead:
@@ -877,8 +905,7 @@ class Game:
                 elif card.name == "Mark":
                     current_player.is_mark_active = True
                     self.set_exchange_phase()
-                    return                    
-
+                    return
 
                 elif card.name == "Oil":
                     if current_player.is_tranquilised > 0:
@@ -920,13 +947,13 @@ class Game:
                     return
                 elif card.name == "Looting":
                     # for i in range(2):
-                        # if not self.deck:
-                        # self.reshuffle_deck()
+                    # if not self.deck:
+                    # self.reshuffle_deck()
                     dead_ones = []
                     for p in self.players:
                         if p.is_dead:
                             dead_ones.append(p)
-                    
+
                     if not dead_ones:
                         self.set_exchange_phase()
                         return
@@ -937,7 +964,7 @@ class Game:
                     is_looted = False
                     for i in range(2):
                         # I = i%len(dead_ones)
-                        looted = dead_ones[i%len(dead_ones)]
+                        looted = dead_ones[i % len(dead_ones)]
                         print(looted)
                         if looted.is_cards_left():
                             looted.shuffle_hand()
@@ -1127,7 +1154,9 @@ class Game:
                 )
                 return
 
-        elif self.phase == "exchange": ########################################### EXCHANGE
+        elif (
+            self.phase == "exchange"
+        ):  ########################################### EXCHANGE
 
             if action["action"] == "react":
 
@@ -1173,7 +1202,7 @@ class Game:
                 if not player.nickname in [
                     current_player.nickname,
                     next_player.nickname,
-                    ]:
+                ]:
                     return
                 # if player.preferred_target:
                 #     self.cross.add_relation_pl_pl(player, next_player)
@@ -1182,10 +1211,9 @@ class Game:
                 else:
                     player.lock_exchange = True
 
-
                 if not self.is_basic_exchange_possible(
                     player, current_player, next_player
-                    ):
+                ):
                     self.end_turn_error(player, "Exchange conditions are not met")
                     return
 
@@ -1194,7 +1222,7 @@ class Game:
 
                 current_card, next_card = self.cross.get_selected_card(
                     current_player
-                    ), self.cross.get_selected_card(next_player)
+                ), self.cross.get_selected_card(next_player)
                 if not current_card is None and not next_card is None:
                     if current_player.lock_exchange and next_player.lock_exchange:
 
@@ -1204,12 +1232,12 @@ class Game:
                         if next_player.is_mark_active:
                             next_card.show_to.append(next_player.nickname)
                             next_player.is_mark_active = False
-                        
+
                         if current_player.is_thing and current_card.name == "Infection":
                             current_card.show_to.append(current_player.nickname)
                         if next_player.is_thing and next_card.name == "Infection":
                             next_card.show_to.append(next_player.nickname)
-                        
+
                         if current_player.is_thing and current_card == "Infection":
                             for c in current_player.hand:
                                 if c.name == "The thing":
@@ -1220,7 +1248,9 @@ class Game:
                                 if c.name == "The thing":
                                     c.show_to.append(current_player.nickname)
 
-                        self.exchange_stack = self.cross.exchange_cards(current_player, next_player)
+                        self.exchange_stack = self.cross.exchange_cards(
+                            current_player, next_player
+                        )
                         # a, b = current_player.hand.pop(current_card), next_player.hand.pop(next_card)
                         is_turn_ended = True
 
@@ -1244,7 +1274,7 @@ async def broadcast_game_state(game):
         "current_player": game.current_player_index,
         "deck_size": len(game.deck),
         "discard_top": game.discard_pile[-1].to_dict() if game.discard_pile else None,
-        "discard_comment" : game.discard_comment,
+        "discard_comment": game.discard_comment,
         "exchange_comment": game.exchange_comment,
         "phase": game.phase,
         "direction": game.direction,
@@ -1279,7 +1309,7 @@ async def websocket_handler(request):
     ws = web.WebSocketResponse()
     await ws.prepare(request)
     request.app["connections"].add(ws)
-    game = request.app["game"] #???
+    game = request.app["game"]  # ???
     player = None
 
     try:
@@ -1305,7 +1335,9 @@ async def websocket_handler(request):
                     else:
                         player = Player(nickname, ws)
                         if not game.add_player(player):
-                            await ws.send_json({"type": "error", "message": "Game full"})
+                            await ws.send_json(
+                                {"type": "error", "message": "Game full"}
+                            )
                             continue
                     await broadcast_game_state(game)
                     if (
@@ -1317,9 +1349,13 @@ async def websocket_handler(request):
                         await broadcast_game_state(game)
                         print(f"Phase: {game.phase}")
                     else:
+                        n_players = game.config["players_per_game"] 
                         print("Waiting players")
                         print("Current:")
-                        print(" ".join(_.nickname for _ in game.players) + f" /{game.config["players_per_game"]}")
+                        print(
+                            " ".join(_.nickname for _ in game.players)
+                            + f" /{n_players}"
+                        )
                 elif data["type"] == "action":
                     await game.process_action(player, data)
                     await broadcast_game_state(game)
@@ -1330,16 +1366,18 @@ async def websocket_handler(request):
         await request.app.restart_game()
     finally:
         request.app["connections"].discard(ws)
-    return ws        
+    return ws
 
     if player:
         player.is_active = False
         await broadcast_game_state(game)
     return ws
 
+
 async def restart_handler(request):
     await request.app.restart_game()
     return web.Response(text="Game restarted!")
+
 
 async def update_config_handler(request):
     if request.method == "POST":
@@ -1392,45 +1430,44 @@ async def restart_game(app):
 
 async def control_panel_page(request):
     """Regular HTTP handler to serve the control panel HTML"""
-    return web.Response(
-        text=control_panel_html,
-        content_type="text/html"
-    )
+    return web.Response(text=control_panel_html, content_type="text/html")
+
 
 async def control_panel_ws(request):
     """WebSocket handler for actual communication"""
     ws = web.WebSocketResponse()
     await ws.prepare(request)
-    
+
     async for msg in ws:
         if msg.type == web.WSMsgType.TEXT:
             try:
                 data = json.loads(msg.data)
                 app = request.app
-                
-                if data['command'] == 'restart':
+
+                if data["command"] == "restart":
                     await app.restart_game()
                     await ws.send_json({"message": "Game restarted!"})
-                    
-                elif data['command'] == 'upload_config':
-                    new_config = json.loads(data['config'])
+
+                elif data["command"] == "upload_config":
+                    new_config = json.loads(data["config"])
                     app["config"] = {**app["config"], **new_config}
                     await app.restart_game()
                     await ws.send_json({"message": "Config updated & restarted!"})
-                    
-                elif data['command'] == 'set_players':
-                    count = int(data['count'])
+
+                elif data["command"] == "set_players":
+                    count = int(data["count"])
                     if count >= 2:
                         app["config"]["players_per_game"] = count
                         await app.restart_game()
-                        await ws.send_json({
-                            "message": f"Set to {count} players & restarted!"
-                        })
-                        
+                        await ws.send_json(
+                            {"message": f"Set to {count} players & restarted!"}
+                        )
+
             except Exception as e:
                 await ws.send_json({"message": f"Error: {str(e)}"})
-    
+
     return ws
+
 
 # Updated HTML template with correct WebSocket URL
 control_panel_html = """ <html>
@@ -1490,8 +1527,8 @@ control_panel_html = """ <html>
     </html>
     """
 
+
 def main():
-    
 
     if not os.path.exists("static"):
         os.makedirs("static")
@@ -1511,7 +1548,6 @@ def main():
     app.router.add_route("*", "/update_config", update_config_handler)
     app.router.add_static("/static/", "static")
 
-
     web.run_app(app, port=8080)
 
 
@@ -1519,11 +1555,11 @@ if __name__ == "__main__":
     main()
 
 
-#Could become less than 2 cards on hand, somehow agility - exchange selected
-#Thing player play button missing +++
-#necronomicon not avoiding exchanges
-#human player cannot give infection +++
-#confirm flamethrower server fault +++
+# Could become less than 2 cards on hand, somehow agility - exchange selected
+# Thing player play button missing +++
+# necronomicon not avoiding exchanges
+# human player cannot give infection +++
+# confirm flamethrower server fault +++
 
 
 #  File "/opt/render/project/src/.venv/lib/python3.11/site-packages/aiohttp/web_app.py", line 567, in _handle

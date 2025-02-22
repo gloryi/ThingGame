@@ -167,6 +167,14 @@
           "description": "Отмените прошлый обмен сыграв карту. Любые эффекты игнорируются. Нельзя отменить заражение.",
           "image": "ye.png",
           "is_playable": true
-        }
+        },
+        "Stone":{
+            "name_displayed": "Камень",
+            "description": "Просто камень. Он ничего не делает. Наверное.",
+            "image": "stone.png",
+            "is_playable" : false,
+            "is_reactable" : false,
+            "require_player_lock" : false
+          }
     }
 }
