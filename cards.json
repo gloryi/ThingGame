@@ -1,0 +1,172 @@
+{
+    "cards": {
+        "Infection":{
+          "name_displayed": "Заражение",
+          "description": "Карта из колоды не ведет к заражению. Карта полученная от другого игрока заражает вас. Игрок передавший вам карту это существо из иного мира, и теперь вы его адепт. Заразившись можно передавать заражение вашему хозяину. На руках нельзя иметь больше 3 карт заражения.",
+          "image": "infection.jpg",
+          "is_exchangable":false
+        },
+        "Last stand":{
+          "name_displayed": "Тактика",
+          "description": "Разыграв эту карту возьмите из колоды три дополнительные, и скиньте с руки три карты.",
+          "image": "last_stand.png",
+          "is_playable": true
+        }
+        ,
+        "Looting":{
+          "name_displayed": "Мародерство",
+          "description": "Возьмите две случайные карты от случайных умерших игроков. Сбросьте две карты с руки.",
+          "image": "looting.png",
+          "is_playable": true
+        }
+        ,
+        "The thing":{
+          "name_displayed": "Существо",
+          "description": "Взяв эту карту вы перестаете быть человеком. Теперь вы можете передавать карты заражения другим игрокам, делая их вашими слугами. И получать карты заражения от ваших слуг. Ваша цель убить или заразить всех людей. Карту нельзя сбросить или обменять.",
+          "image": "the_thing.png",
+          "is_exchangable" : false,
+          "is_discardable" : false
+        }
+        ,
+        "Sniper rifle":{
+          "name_displayed": "Винтовка",
+          "description": "Попытаться застрелить любого игрока. Игрок может защититься броня или ловкостью.",
+          "image": "sniperrifle.png",
+          "is_playable": true,
+          "require_player_lock": true
+        }
+        ,
+        "Flamethrower":{
+          "name_displayed": "Огнемет",
+          "description": "Попытаться сжечь одного из соседних игроков. Игрок может защититься броней.",
+          "image": "flamethrower.jpg",
+          "is_playable": true,
+          "require_player_lock": true,
+          "neighbours_only" : true
+        }
+        ,
+        "Armor":{
+          "name_displayed": "Броня",
+          "description": "Избегите любой смертельной угрозы.",
+          "image": "armor.png",
+          "is_reactable": true
+        }
+        ,
+        "Reanimate":{
+          "name_displayed": "Реанимировать",
+          "description": "Оживите выбранного игрока на два его хода. По истечению срока игрок снова умрет.",
+          "image": "reanimate.png",
+          "is_reactable": false,
+          "is_playable": true,
+          "require_player_lock": true
+        },
+        "Blood Sample":{
+          "name_displayed": "Анализ крови",
+          "description": "Посмотреть все карты одного из соседних игроков.",
+          "image": "bloodtest.png",
+          "is_playable": true,
+          "require_player_lock": true,
+          "neighbours_only" : true
+        }
+        ,
+        "Spying":{
+          "name_displayed": "Подсматривание",
+          "description": "Подсмотреть одну случайную карту одного из соседних игроков.",
+          "image": "spying.png",
+          "is_playable": true,
+          "require_player_lock": true,
+          "neighbours_only" : true
+        }
+        ,
+        "Mark":{
+          "name_displayed": "UV-краска",
+          "description": "Сыграв эту карту, после следующего обмена вы будете видеть карту, которую отдали.",
+          "image": "mark.png",
+          "is_playable": true
+        }
+        ,
+        "Delirium":{
+          "name_displayed": "Нервный срыв",
+          "description": "Вы доводите себя до нервного срыва. Вы раскрываете свои карты остальным игрокам.",
+          "image": "delirium.png",
+          "is_playable": true
+        }
+        ,
+        "Signal rocket":{
+          "name_displayed": "Ракетница",
+          "description": "Запустить сигнальную ракету, поменяв направление игры. Ваш ход продолжается.",
+          "image": "alarm.png",
+          "is_playable": true
+        },
+        "Swap":{
+          "name_displayed": "Не та дверь.",
+          "description": "Поменяться местами с одним из соседних игроков. Ход сохраняется за вами.",
+          "image": "swap.png",
+          "is_playable": true,
+          "neighbours_only": true,
+          "require_player_lock": true
+        },
+        "Violence":{
+          "name_displayed": "Насилие",
+          "description": "Поменяться местами с любым из игроков. Не обязательно с соседним. Ход сохраняется за вами.",
+          "is_playable": true,
+          "image": "violence.png",
+          "require_player_lock": true
+        },
+        "Fuck You":{
+          "name_displayed": "Fuck you",
+          "description": "Отказаться от обмена местами. Взять карту из колоды вместо сыгранной.",
+          "image": "fuckyou.png",
+          "is_reactable": true
+        },
+        "Signs":{
+          "name_displayed": "Сталкинг" ,
+          "description": "Обменяться картами с произвольным игроком вместо соседнего. Очередность хода сохраняется.",
+          "image": "stalking.png",
+          "is_playable": true,
+          "require_player_lock": true
+        },
+        "Fear":{
+          "name_displayed": "Страх",
+          "description": "Сыграйте эту карту вместо обмена. Откажитесь от обмена.",
+          "image": "fear.png",
+          "is_reactable": true,
+          "is_playable": false
+        },
+        "Talk Out":{
+          "name_displayed": "Заболтать",
+          "description": "Сыграйте эту карту вместо обмена. Откажитесь от обмена. Посмотрите карту, которую вам хотели передать.",
+          "image": "talk-out.png",
+          "is_reactable": true,
+          "is_playable": false
+        },
+        "Necronomicon":{
+          "name_displayed": "Некрономикон",
+          "description": "Сыграйте эту карту чтобы отменить любое действие направленное на вас, обмен или карту.",
+          "image": "necronomicon.png",
+          "is_reactable": true,
+          "is_playable": false
+        },
+        "Bondage":{
+          "name_displayed": "Бондаж",
+          "description": "Свяжите соседнего игрока. Связанный игрок сможет только обновить карты на руке, и не сможет ни с кем меняться картамии.",
+          "image": "bondage.png",
+          "is_playable": true,
+          "require_player_lock": true,
+          "neighbours_only" : true
+        },
+        "Oil":{
+          "name_displayed": "Ловкость",
+          "description": "Сбросьте карту в свой ход если связаны, чтобы освободиться. Сыграйте в ответ на бондаж или винтовку.",
+          "image": "Oil.png",
+          "is_playable": true,
+          "is_reactable" : true
+        },
+        "Ye":{
+          "name_displayed": "Запугать",
+          "description": "Отмените прошлый обмен сыграв карту. Любые эффекты игнорируются. Нельзя отменить заражение.",
+          "image": "ye.png",
+          "is_playable": true
+        }
+    }
+}

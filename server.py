@@ -5,6 +5,7 @@ import json
 import random
 import logging
 import os
+import os.path
 
 logging.basicConfig(level=logging.INFO)
 
@@ -24,7 +25,7 @@ class Card:
         self.name = name
         self.description = description
         self.discard_face_down = True
-        print(f"Card {self.id} created")
+        print(f"{self.id} |", end = " | ")
 
     def play(self, game, player):
         """To be overridden by subclasses"""
@@ -100,6 +101,8 @@ class Player:
         self.lock_player = False
         self.is_dead = False
         self.is_tranquilised = 0
+        self.is_reanimated = 0
+        self.is_mark_active = False
         self.is_thing = False
         self.is_infected = False
         self.is_forced_discards = False
@@ -125,6 +128,7 @@ class Player:
             "is_dead": self.is_dead,
             "is_active": self.is_active,
             "is_tranquilised": self.is_tranquilised,
+            "is_reanimated": self.is_reanimated,
             "is_thing": self.is_thing,
             "is_infected": self.is_infected,
             "is_forced_discards": self.is_forced_discards,
@@ -160,8 +164,18 @@ class Player:
         if self.is_tranquilised:
             self.is_tranquilised -= 1
 
+        self.is_reanimated -= 1
+        if self.is_reanimated == 1:
+            self.is_reanimated = 0
+            self.is_dead = True
+            for c in self.hand:
+                c.show_to = ["all"]
+        
+
     def could_exchange(self):
         if self.is_tranquilised:
+            return False
+        if self.is_dead:
             return False
         return True
 
@@ -189,10 +203,41 @@ class Player:
             return self.hand.pop(idx)
         else:
             return self.hand.pop(self.__selected_card)
+    
+    def extract_card_id(self, idx, drop=False):
+        selected_card, I = None, 0
+        print("Selecting by id")
+        for i, c in enumerate(self.hand):
+            print(c.id, end = " ")
+            print
+            if c.id == idx:
+                selected_card = c
+                print(f"Selected by id is {c} -- {c.id}")
+                print("+++")
+                print(f"{selected_card}")
+                I = i
+                print()
+                break
+        
+        print(f"Selected card {selected_card}")
+        if not selected_card:
+            print(f"Selected by id is None -- {idx}")
+            return None
+
+        if drop:
+            print("Dropping")
+            return self.hand.pop(I)
+        
+        print(f"Returning {selected_card}")
+
+        return selected_card
 
     def shuffle_hand(self):
         random.shuffle(self.hand)
         self.end_turn_clean()
+    
+    def is_cards_left(self):
+        return len(self.hand) > 0
 
     def check_forced_discards(self):
         if len(self.hand) > 4:
@@ -300,6 +345,7 @@ class CrossRelations:
         ), player_2.extract_selected_card(player_2_cidx)
         player_1.append_card(card2, from_deck = False)
         player_2.append_card(card1, from_deck = False)
+        return [player_1.nickname, card2.id, player_2.nickname, card1.id]
 
     def extract_selected_card(self, player_1):
         player_1_name = player_1.nickname
@@ -323,8 +369,11 @@ class Game:
         self.players = []
         self.deck = []
         self.discard_pile = []
+        self.discard_comment = []
+        self.exchange_comment = []
         self.cross = CrossRelations(config["players_per_game"])
         self.post_action_stack = []
+        self.exchange_stack = []
         self.current_player_index = 0
         self.direction = 1  # Clockwise
         self.phase = "waiting"
@@ -334,16 +383,17 @@ class Game:
     def initialize_deck(self):
         self.deck = []
         card_id = 0
-        for card_def in self.config["cards"]:
-            # HARDCODE - changed mind on cards inheritance
-            card_class = BasicCard
-            # card_class = globals()[card_def['type']]
-            for _ in range(card_def["count"]):
-
+        card_class = BasicCard
+        #generate_cards
+        # initial_cards = []
+        for card_name in self.config["deck_composition"]:
+            for n in range(self.config["deck_composition"][card_name]):
+                # initial_cards.append()
+                card_def = self.config["cards"][card_name]
                 self.deck.append(
                     card_class(
-                        f"{card_def['name']}_{card_id}",
-                        card_def["name"],
+                        card_name + "_" + str(card_id),
+                        card_name,
                         card_def["description"],
                         card_def,
                     )
@@ -371,14 +421,15 @@ class Game:
         return False
 
     def start_game(self):
+        test_cards = [_ for _ in self.config["test_granted"]]
         if len(self.players) != self.config["players_per_game"]:
             return False
         for _ in range(4):
             for player in self.players:
                 if not self.deck:
                     self.reshuffle_deck()
-                if self.config["test_granted"]:
-                    granted = self.config["test_granted"].pop()
+                if test_cards:
+                    granted = test_cards.pop()
                     granted_in_deck = [_ for _ in self.deck if _.name == granted]
                     if granted_in_deck:
                         player.append_card(self.deck.pop(self.deck.index(granted_in_deck[0])))
@@ -513,6 +564,27 @@ class Game:
                     )
                     return False
 
+            if self.cross.get_selected_card(player).name == "Ye":
+                if not self.exchange_stack or player.nickname not in self.exchange_stack or not len(self.exchange_stack) == 4:
+                    self.end_turn_error(
+                        player, f"{player.nickname} not in exchange stack or exchange stack is empty"
+                    )
+                    return False
+            
+                card1, card2 = self.get_by_nickname(self.exchange_stack[0]).extract_card_id(self.exchange_stack[1],drop = False), self.get_by_nickname(self.exchange_stack[2]).extract_card_id(self.exchange_stack[3], drop = False)
+
+                if not card1 or not card2:
+                    logging.info(
+                        f"Some wrong {self.get_by_nickname(self.exchange_stack[0]).nickname} or {self.get_by_nickname(self.exchange_stack[2]).nickname} cannot return exchanged cards, some of cards None, lol"
+                    )
+                    return False         
+                if card1.name == "Infection" or card2.name == "Infection":
+                    logging.info(
+                        f"Some wrong {self.get_by_nickname(self.exchange_stack[0]).nickname} or {self.get_by_nickname(self.exchange_stack[2]).nickname} cannot return exchanged cards"
+                    )
+                    return False
+
+
         if (
             action_type == "discard"
             and not self.cross.get_selected_card(player).is_discardable
@@ -569,6 +641,7 @@ class Game:
 
     def set_exchange_phase(self):
         self.phase = "exchange"
+        self.discard_comment = []
         logging.info("Exchange phase initiated")
         self.cross.end_turn_clean(soft=True)
         for p in self.players:
@@ -593,8 +666,11 @@ class Game:
             self.phase = "draw"
             self.end_turn_clean()
             self.post_action_stack = []
+        self.exchange_comment = [current_player.nickname, next_player.nickname]
 
     def end_turn_clean(self):
+        self.discard_comment = []
+        self.exchange_comment = []
         self.cross.end_turn_clean(soft=False)
         for p in self.players:
             p.end_turn_clean()
@@ -676,6 +752,15 @@ class Game:
                 current_player.append_card(self.deck.pop())
 
             current_player.process_turn_effects()
+            if current_player.is_dead:
+                self.current_player_index = self.get_next_player_index(
+                    self.current_player_index, self.direction
+                )
+                self.phase = "draw"
+                self.end_turn_clean()
+                self.post_action_stack = []
+                return
+
             self.phase = "action"
             return
 
@@ -694,16 +779,27 @@ class Game:
             if action["action"] == "play":
                 card.discard_face_down = False
                 card.show_to = []
-                self.discard_pile.append(card)
-
+                self.discard_pile.append(card) 
                 # hardcoded
                 if card.name == "Signal rocket":
                     self.direction = self.direction * -1
                     self.set_exchange_phase()
                     return
+                
+                elif card.name == "Ye":
+                    
+                    # target_player = self.get_by_nickname(self.exchange_stack[2])
+                    card1, card2 = self.get_by_nickname(self.exchange_stack[0]).extract_card_id(self.exchange_stack[1],drop = True), self.get_by_nickname(self.exchange_stack[2]).extract_card_id(self.exchange_stack[3], drop = True)
+                    
+                    self.get_by_nickname(self.exchange_stack[0]).append_card(card2, from_deck = False)
+                    self.get_by_nickname(self.exchange_stack[2]).append_card(card1, from_deck = False)
+                    self.set_exchange_phase()
+                    return
+
 
                 elif card.name == "Signs":
                     target_player = self.get_by_nickname(self.cross.get_target(player))
+                    self.discard_comment = [player.nickname, target_player.nickname]
                     if (
                         current_player.could_exchange()
                         and target_player.could_exchange()
@@ -725,6 +821,7 @@ class Game:
 
                 elif card.name in ["Flamethrower", "Sniper rifle"]:
                     target_player = self.get_by_nickname(self.cross.get_target(player))
+                    self.discard_comment = [player.nickname, target_player.nickname]
                     # TODO allow to use armor
                     self.post_action_stack = [
                         card.name,
@@ -737,6 +834,7 @@ class Game:
 
                 elif card.name == "Blood Sample":
                     target_player = self.get_by_nickname(self.cross.get_target(player))
+                    self.discard_comment = [player.nickname, target_player.nickname]
                     self.post_action_stack = [
                         card.name,
                         current_player.nickname,
@@ -746,6 +844,7 @@ class Game:
                     return
                 elif card.name == "Spying":
                     target_player = self.get_by_nickname(self.cross.get_target(player))
+                    self.discard_comment = [player.nickname, target_player.nickname]
                     self.post_action_stack = [
                         card.name,
                         current_player.nickname,
@@ -756,10 +855,30 @@ class Game:
 
                 elif card.name == "Bondage":
                     target_player = self.get_by_nickname(self.cross.get_target(player))
+                    self.discard_comment = [player.nickname, target_player.nickname]
                     # target_player.is_tranquilised = 3
                     self.post_action_stack = [card.name, target_player, 3]
                     self.phase = "post-action"
                     return
+                
+                elif card.name == "Reanimate":
+                    target_player = self.get_by_nickname(self.cross.get_target(player))
+                    if not target_player.is_dead:
+                        return
+                    self.discard_comment = [player.nickname, target_player.nickname]
+
+                    target_player.is_reanimated = 3
+                    target_player.is_dead = False
+                    for card in target_player.hand:
+                        card.show_to = []
+                    self.set_exchange_phase()
+                    return
+
+                elif card.name == "Mark":
+                    current_player.is_mark_active = True
+                    self.set_exchange_phase()
+                    return                    
+
 
                 elif card.name == "Oil":
                     if current_player.is_tranquilised > 0:
@@ -776,6 +895,7 @@ class Game:
 
                 elif card.name == "Swap" or card.name == "Violence":
                     target_player = self.get_by_nickname(self.cross.get_target(player))
+                    self.discard_comment = [player.nickname, target_player.nickname]
                     target_index = self.players.index(target_player)
                     index_1, index_2 = self.current_player_index, target_index
                     self.post_action_stack = [
@@ -798,12 +918,44 @@ class Game:
                     current_player.is_forced_discards = True
                     # it's still play phase exchange later
                     return
+                elif card.name == "Looting":
+                    # for i in range(2):
+                        # if not self.deck:
+                        # self.reshuffle_deck()
+                    dead_ones = []
+                    for p in self.players:
+                        if p.is_dead:
+                            dead_ones.append(p)
+                    
+                    if not dead_ones:
+                        self.set_exchange_phase()
+                        return
+                    random.shuffle(dead_ones)
+
+                    logging.info(dead_ones)
+
+                    is_looted = False
+                    for i in range(2):
+                        # I = i%len(dead_ones)
+                        looted = dead_ones[i%len(dead_ones)]
+                        print(looted)
+                        if looted.is_cards_left():
+                            looted.shuffle_hand()
+                            looted_card = looted.extract_selected_card(idx=0)
+                            looted_card.show_to = []
+                            current_player.append_card(looted_card)
+                            is_looted = True
+
+                    if is_looted:
+                        current_player.is_forced_discards = True
+                    # it's still play phase exchange later
+                    return
 
             elif action["action"] == "discard":
 
                 if player.is_tranquilised > 0 and card.name in [
                     "Oil",
-                    "Necronomadd_relation_pl_plicon",
+                    "Necronomicon",
                 ]:
                     player.is_tranquilised = 0
                     card.discard_face_down = False
@@ -815,6 +967,7 @@ class Game:
 
                 else:
 
+                    self.discard_comment = []
                     card.discard_face_down = True
                     card.show_to = []
                     self.discard_pile.append(card)
@@ -918,6 +1071,7 @@ class Game:
                     # self.post_action_stack = [card.name,current_player.nickname,target_player]
                     # self.post_action_stack = [card.name, target_player]
                     self.post_action_stack[2].is_dead = True
+                    self.post_action_stack[2].reveal_cards()
                 elif source_card_name == "Bondage":
                     # self.post_action_stack = [card.name, target_player, 3]
                     self.post_action_stack[1].is_tranquilised = 3
@@ -1043,7 +1197,30 @@ class Game:
                     ), self.cross.get_selected_card(next_player)
                 if not current_card is None and not next_card is None:
                     if current_player.lock_exchange and next_player.lock_exchange:
-                        self.cross.exchange_cards(current_player, next_player)
+
+                        if current_player.is_mark_active:
+                            current_card.show_to.append(current_player.nickname)
+                            current_player.is_mark_active = False
+                        if next_player.is_mark_active:
+                            next_card.show_to.append(next_player.nickname)
+                            next_player.is_mark_active = False
+                        
+                        if current_player.is_thing and current_card.name == "Infection":
+                            current_card.show_to.append(current_player.nickname)
+                        if next_player.is_thing and next_card.name == "Infection":
+                            next_card.show_to.append(next_player.nickname)
+                        
+                        if current_player.is_thing and current_card == "Infection":
+                            for c in current_player.hand:
+                                if c.name == "The thing":
+                                    c.show_to.append(next_player.nickname)
+
+                        if next_player.is_thing and next_card == "Infection":
+                            for c in next_player.hand:
+                                if c.name == "The thing":
+                                    c.show_to.append(current_player.nickname)
+
+                        self.exchange_stack = self.cross.exchange_cards(current_player, next_player)
                         # a, b = current_player.hand.pop(current_card), next_player.hand.pop(next_card)
                         is_turn_ended = True
 
@@ -1067,6 +1244,8 @@ async def broadcast_game_state(game):
         "current_player": game.current_player_index,
         "deck_size": len(game.deck),
         "discard_top": game.discard_pile[-1].to_dict() if game.discard_pile else None,
+        "discard_comment" : game.discard_comment,
+        "exchange_comment": game.exchange_comment,
         "phase": game.phase,
         "direction": game.direction,
         "cs": game.cross.to_dict(),
@@ -1137,6 +1316,10 @@ async def websocket_handler(request):
                         game.start_game()
                         await broadcast_game_state(game)
                         print(f"Phase: {game.phase}")
+                    else:
+                        print("Waiting players")
+                        print("Current:")
+                        print(" ".join(_.nickname for _ in game.players) + f" /{game.config["players_per_game"]}")
                 elif data["type"] == "action":
                     await game.process_action(player, data)
                     await broadcast_game_state(game)
@@ -1164,7 +1347,9 @@ async def update_config_handler(request):
         new_config_file = data["config_file"].file.read()
         try:
             new_config = json.loads(new_config_file)
-            request.app["config"] = new_config
+            for key in new_config:
+                request.app["config"][key] = new_config[key]
+            # request.app["config"] = new_config
             await request.app.restart_game()
             return web.Response(text="Config updated!")
         except json.JSONDecodeError:
@@ -1182,11 +1367,27 @@ async def update_config_handler(request):
 async def index_handler(request):
     return web.FileResponse("./static/index.html")
 
+
+def load_config():
+    config_filename = "config.json"
+    if os.path.isfile("TEST_MARK"):
+        config_filename = "config_test.json"
+    try:
+        with open(config_filename, encoding="utf-8") as f:
+            with open("cards.json", encoding="utf-8") as fc:
+                main_config = json.load(f)
+                main_config.update(json.load(fc))
+                return main_config
+    except FileNotFoundError:
+        return {"default": "config"}
+
+
 async def restart_game(app):
     for ws in set(app["connections"]):
         await ws.close(code=1001, message=b"Restarting")
+    config = load_config()
     app["connections"].clear()
-    app["game"] = Game(app["config"])
+    app["game"] = Game(config)
 
 
 async def control_panel_page(request):
@@ -1288,15 +1489,6 @@ control_panel_html = """ <html>
     </script>
     </html>
     """
-
-
-
-def load_config():
-    try:
-        with open("config.json", encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {"default": "config"}
 
 def main():
     

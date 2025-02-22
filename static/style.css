@@ -11,7 +11,10 @@
     grid-template-rows: repeat(3, 1fr);
     width: 100vw;
     height: 100vh;
-    background: #06BC6D;
+    /* background: #06BC6D; */
+    background-image: url("background.jpg");
+    background-size: cover;
+    /* background-blend-mode: lighten; */
     position: fixed;
     top: 0;
     left: 0;
@@ -84,8 +87,9 @@
 }
 
 .card.selected {
-    transform: translateY(-5px) scale(1.3);
+    transform: translateY(-5px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transform: scale(1.05);
 }
 
 /* Action buttons container */
@@ -141,34 +145,16 @@
 #hints {
     position: absolute;
     top: 15px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.7);
+    left: 10%;
+    transform: translateX(-10%);
+    background: rgba(0,0,0,0.6);
     color: white;
     padding: 10px 20px;
     border-radius: 20px;
     font-size: 14px;
-    max-width: 80%;
+    max-width: 20%;
     text-align: center;
 }
-
-/* Debug grid overlay */
-.grid-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    background:
-        linear-gradient(to right, #000 1px, transparent 1px),
-        linear-gradient(to bottom, #000 1px, transparent 1px);
-    background-size: calc(100% / 3) calc(100% / 3);
-}
-
-
-
-
 
 
 
@@ -184,8 +170,8 @@
 }
 
 .card {
-    width: 100px;
-    height: 100px;
+    width: 125px;
+    height: 125px;
     border: 2px solid #333;
     border-radius: 20px;
     margin: 5px;
@@ -224,8 +210,8 @@
 }
 
 .deck {
-    width: 100px;
-    height: 140px;
+    width: 125px;
+    height: 125px;
     border: 2px dashed #fff;
     border-radius: 10px;
     display: flex;
@@ -275,17 +261,17 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    font-size: 200px;
+    font-size: 175px;
     color: gold;
     text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
     transform-origin: center;
-    opacity: 0.2;
+    opacity: 0.4;
     
 }
 
 .player-name {
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 25px;
     color: #333;
     background-color: white;
     border-radius: 5px;
@@ -297,6 +283,24 @@
 
 .player-name-target {
     background-color: turquoise;
+}
+
+.player-name-exchange {
+    transform: scale(1.5);
+    font-weight: bold;
+    border-color: purple;
+    border:coral;
+    border-width: 5px;
+    border-style: dotted;
+}
+
+.player-name-action {
+    transform: scale(1.5);
+    font-weight: bold;
+    border-color: red;
+    border:aliceblue;
+    border-width: 5px;
+    border-style: dotted;
 }
 
 .card-name {
@@ -332,12 +336,13 @@
     justify-content: center;  /* Vertical centering */
     height: 100%;
     gap: 10px;  /* Space between elements */
+    border-radius: 10px;
 }
 
 /* Card sizing update */
 .card {
-    width: 100px;  /* Increased from 60px */
-    height: 100px;  /* Increased from 90px */
+    width: 125px;  /* Increased from 60px */
+    height: 125px;  /* Increased from 90px */
     font-size: 14px;  /* Larger text */
 }
 

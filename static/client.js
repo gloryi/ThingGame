@@ -99,8 +99,9 @@ function getDiscardText(state) {
         return ` <div class="card face-down"></div> `
 
     } else {
-        return `<div class="card" style="background-image:url(static/${state.discard_top.image}); background-size: cover;">
-                <div class="card-name">${state.discard_top.name_displayed}</div></div>`
+        discard_text_ex = state.discard_comment ? `${state.discard_comment[0]} -> ${state.discard_comment[1]}` : "";
+        return `<div class="card"><div class="card" style="background-image:url(static/${state.discard_top.image}); background-size: cover;">
+                </div><div class="card-name">${state.discard_top.name_displayed}</div><div class="card-name">${discard_text_ex}</div></div>`
     }
 
     // return state.discard_top.face_down ? 'Face down' : state.discard_top.name_displayed;
@@ -136,15 +137,20 @@ function createPlayerElement(state, player, index, currentPlayerIndex, hand, is_
     Object.assign(playerEl.style, positions[index % 8]);
     
     // Player content
-    logToServer(player.nickname + ' lock exchange: ' + player.lock_exchange)
+
+    // player_class = player.is_targeted? `player-name ${gameState.exchange_comment.includes(player.nickname)? " player-name-exchange" : ""} ${gameState.discard_comment.includes(player.nickname) ? " player-name-action" : ""} ${is_current ? " player-name-active" : ""}` : "player-name-target";
+    player_class = `player-name ${gameState.exchange_comment.includes(player.nickname)? " player-name-exchange" : ""} ${gameState.discard_comment.includes(player.nickname) ? " player-name-action" : ""} ${is_current ? " player-name-active" : ""}`;
+    // logToServer(player_class);
     playerEl.innerHTML = `
     <div class="player-content" ${selected_target === player.nickname ? 'style="background-color:#6683D9;"' : ''} ${is_self && player.is_infected ? 'style="background-color:#0BD9C4;"' : ''} ${is_self && player.is_thing ? 'style="background-color:#134254;"' : ''}>
-        <div class=${player.is_targeted? "player-name" : "player-name-target"}>
+        <div class="${player_class}">
         ${player.is_dead ? player.nickname + ' is Dead' : player.nickname}
         ${player.lock_exchange ? ' +++' : ''}
-        ${is_self && player.is_infected ? ' Infected' : ''}
-        ${is_self && player.is_thing ? ' Thing' : ''}
-        ${player.is_tranquilised>0? ' Tied up' : ''}</div>
+        ${(is_self || (gameState.phase === "human-win"  || gameState.phase === "thing-win")) && player.is_infected   ? ' Infected' : ''}
+        ${(is_self || (gameState.phase === "human-win"  || gameState.phase === "thing-win")) && player.is_thing || (gameState.phase === "human-win"  || gameState.phase === "thing-win")? ' Thing' : ''}
+        ${player.is_tranquilised>0? ` Tied up ${player.is_tranquilised}` : ''}
+        ${player.is_reanimated>0? ` Reanimated ${player.is_reanimated-1}` : ''}
+        </div>
         <div class="hand">${renderPlayerHand(state, player, index, hand, is_self, self_name)}</div>
         ${is_self ? renderActionButtons(is_self, is_current, is_targeted, player.is_dead, player.is_tranquilised, player.is_forced_discards) : ''}
     </div>
@@ -196,8 +202,8 @@ function renderPlayerHand(state, player, index, hand, is_self, self_name) {
     } else {
         // logToServer(hand);
         return player.hand.map((card, idx) => `
-            <div class="card ${card.show_to.includes(self_name) || card.show_to.includes('all') ? '' : 'face-down'}">
-                ${card.show_to.includes(self_name) || card.show_to.includes('all') ? `<div class="card" style="background-image:url(static/${card.image}); background-size: cover;"></div><div class="card-name">${card.name_displayed}</div>
+            <div class="card ${card.show_to.includes(self_name) || card.show_to.includes('all') || gameState.phase === "human-win"  || gameState.phase === "thing-win" ? '' : 'face-down'}">
+                ${card.show_to.includes(self_name) || card.show_to.includes('all') || gameState.phase === "human-win"  || gameState.phase === "thing-win" ? `<div class="card" style="background-image:url(static/${card.image}); background-size: cover;"></div><div class="card-name">${card.name_displayed}</div>
                 `: ''}
             </div>
     `).join('');
@@ -247,7 +253,11 @@ const translations = {
         'Draw Card': 'Взять карту',
         'Play Selected':'Сыграть карту',
         'Discard Selected':'Сбросить карту',
-        'React with selected':'Отреагировать картой'
+        'React with selected':'Отреагировать картой',
+        'Shuffle hand' : 'Перемешать карты',
+        'Avoid exchange' : 'Избежать обмена',
+        'should draw a card' : 'должен взять карту',
+        'You are dead': 'Вас убили'
 
     },
     // Add more languages as needed
@@ -266,7 +276,7 @@ function localise(message) {
 
 function renderActionButtons(is_self, is_current, is_targeted, is_dead, is_tranquilised, is_forced_discards) {
     if(is_dead){
-        return '<div>---</div>';
+        return `<div>${localise('You are dead')}</div>`;
     }
     else if (is_self){
     return `
@@ -291,12 +301,12 @@ function renderActionButtons(is_self, is_current, is_targeted, is_dead, is_tranq
             ` : ''}
         
         ${gameState.phase === 'exchange' && (is_targeted) ? `
-            <button onclick="handleAction('react')">Avoid exchange</button>
+            <button onclick="handleAction('react')">${localise('Avoid exchange')}</button>
             ` : ''}
         
         
             ${gameState.phase != 'waiting' && gameState.phase != 'post-action'?
-        `<button onclick="handleAction('shuffle')" >Shuffle hand</button>`:''}
+        `<button onclick="handleAction('shuffle')" >${localise('Shuffle hand')}</button>`:''}
         </div>
     `;
             }
@@ -310,11 +320,11 @@ function getHintText(state) {
     
     switch(state.phase) {
         case 'draw':
-            return `${currentPlayer.nickname} should draw a card`;
+            return `${currentPlayer.nickname} ${localise('should draw a card')}`;
         case 'action':
             return `${currentPlayer.nickname} - select card to play or discard`;
         case 'exchange':
-            return `${currentPlayer.nickname} - select card to exchange`;
+            return `${state.exchange_comment[0]} x ${state.exchange_comment[1]} - select card to exchange`;
         case 'thing-win':
             return 'Game ended, all humans was either infected or killed';
         case 'human-win':
@@ -322,7 +332,7 @@ function getHintText(state) {
         case 'post-action':
             return `${currentPlayer.nickname} - confirming played action, targeted player could react`
         default:
-            return 'Waiting for players...';
+            return 'Waiting for players...';handlePlayerClick
     }
 }
 
@@ -352,7 +362,7 @@ function handlePlayerClick(playerIndex) {
 
 function handleAction(actionType) {
     if ((gameState.phase === 'exchange' || gameState.phase == "action" || actionType === "card_selection") && selectedCardIndex === null) {
-        logToServer('No card selected for action');
+        // logToServer('No card selected for action');
         return;
     }
 
