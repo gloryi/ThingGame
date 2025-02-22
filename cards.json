@@ -176,5 +176,12 @@
             "is_reactable" : false,
             "require_player_lock" : false
           }
+          ,
+          "Trasher":{
+              "name_displayed": "Мусорщик",
+              "description": "Забрать верхнюю карту из сброса. Скинуть с руки одну лишнюю карту.",
+              "image": "trasher.png",
+              "is_playable" : true
+            }
     }
 }

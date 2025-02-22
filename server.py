@@ -603,6 +603,14 @@ class Game:
                     )
                     return False
 
+            if self.cross.get_selected_card(player).name == "Trasher":
+                if not self.discard_pile:
+                    logging.info(
+                        f"{player.nickname} cannot loot empty discard pile"
+                    )
+                    return False
+
+
         if (
             action_type == "discard"
             and not self.cross.get_selected_card(player).is_discardable
@@ -944,6 +952,17 @@ class Game:
                         current_player.append_card(self.deck.pop())
                     current_player.is_forced_discards = True
                     # it's still play phase exchange later
+                    return
+                elif card.name == "Trasher":
+                    trasher_self = self.discard_pile.pop()
+                    current_player.append_card(self.discard_pile.pop())
+                    
+                    trasher_self.discard_face_down = False
+                    trasher_self.show_to = []
+                    self.discard_pile.append(trasher_self)
+                    self.discard_comment = []
+
+                    current_player.is_forced_discards = True
                     return
                 elif card.name == "Looting":
                     # for i in range(2):
@@ -1321,14 +1340,19 @@ async def websocket_handler(request):
                     existing = next(
                         (p for p in game.players if p.nickname == nickname), None
                     )
+                    # print(f"Player already existing? {existing.nickname}")
                     if existing:
+                        print(f"Existing active? {existing.is_active}")
                         if existing.is_active:
+                            print(f"Existing ws.closed? {existing.ws.closed}")
+
                             if not existing.ws.closed:
                                 await ws.send_json(
                                     {"type": "error", "message": "Name taken"}
                                 )
                                 continue
                         else:
+                            print("Reconnected kind of")
                             existing.ws = ws
                             existing.is_active = True
                             player = existing
@@ -1361,6 +1385,10 @@ async def websocket_handler(request):
                     await broadcast_game_state(game)
                 elif data["type"] == "client_log":  # Add this handler
                     logging.info(f"CLIENT LOG: {data['message']}")
+        if player:
+            player.is_active = False
+            await broadcast_game_state(game)
+        return ws
     except Exception as e:
         print(f"Crash: {e}")
         await request.app.restart_game()
@@ -1368,10 +1396,7 @@ async def websocket_handler(request):
         request.app["connections"].discard(ws)
     return ws
 
-    if player:
-        player.is_active = False
-        await broadcast_game_state(game)
-    return ws
+
 
 
 async def restart_handler(request):
@@ -1423,7 +1448,9 @@ def load_config():
 async def restart_game(app):
     for ws in set(app["connections"]):
         await ws.close(code=1001, message=b"Restarting")
-    config = load_config()
+    # config = load_config()
+    # Load config issues, need to use local var wether config was updated. Probably.
+    config = app["config"]
     app["connections"].clear()
     app["game"] = Game(config)
 

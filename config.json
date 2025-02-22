@@ -3,7 +3,7 @@
   "test_granted": [],
   "deck_composition":
       {
-        "Infection":5,
+        "Infection":10,
         "Last stand":3,
         "Looting":2,
         "The thing":1,
@@ -26,6 +26,7 @@
         "Bondage":3,
         "Oil":4,
         "Ye": 3,
-        "Stone":7
+        "Stone":6,
+        "Trasher":4
   }
 }

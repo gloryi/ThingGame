@@ -1,9 +1,9 @@
 {
   "players_per_game": 3,
-  "test_granted": ["Looting","Flamethrower","Ye","Flamethrower","The thing"],
+  "test_granted": ["Trasher","Flamethrower","Ye","Flamethrower","The thing"],
   "deck_composition":
       {
-        "Infection":5,
+        "Infection":10,
         "Last stand":3,
         "Looting":2,
         "The thing":1,
@@ -26,6 +26,7 @@
         "Bondage":3,
         "Oil":4,
         "Ye": 3,
-        "Stone":7
+        "Stone":6,
+        "Trasher":4
   }
 }
