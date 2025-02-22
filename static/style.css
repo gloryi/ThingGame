@@ -22,6 +22,20 @@
     gap: 10px;
 }
 
+.overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: url("ice-crystals.png");
+    background-size: cover;
+    opacity: 0;
+    animation: fade 30s infinite;
+    pointer-events: none;
+  }
+  @keyframes fade {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 0.3; }
+  }
+
 /* Generic zone styling */
 .game-zone {
     background: rgba(255, 255, 255, 0.9);
@@ -135,7 +149,7 @@
 
 /* Direction arrow */
 .direction-arrow {
-    font-size: 40px;
+    font-size: 45px;
     color: gold;
     transform: rotate(0deg);
     transition: transform 0.3s;
@@ -151,8 +165,8 @@
     color: white;
     padding: 10px 20px;
     border-radius: 20px;
-    font-size: 14px;
-    max-width: 20%;
+    font-size: 15px;
+    max-width: 22%;
     text-align: center;
 }
 

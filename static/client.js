@@ -257,8 +257,10 @@ const translations = {
         'Shuffle hand' : 'Перемешать карты',
         'Avoid exchange' : 'Избежать обмена',
         'should draw a card' : 'должен взять карту',
-        'You are dead': 'Вас убили'
-
+        'You are dead': 'Вас убили',
+        'Exchange Selected': 'Обменять карту',
+        'select card to play or discard': 'сыграйте или сбросьте карту',
+        'select card to exchange': 'выберите карту для обмена'
     },
     // Add more languages as needed
 };
@@ -322,9 +324,9 @@ function getHintText(state) {
         case 'draw':
             return `${currentPlayer.nickname} ${localise('should draw a card')}`;
         case 'action':
-            return `${currentPlayer.nickname} - select card to play or discard`;
+            return `${currentPlayer.nickname} - ${localise('select card to play or discard')}`;
         case 'exchange':
-            return `${state.exchange_comment[0]} x ${state.exchange_comment[1]} - select card to exchange`;
+            return `${state.exchange_comment[0]} x ${state.exchange_comment[1]} - ${localise('select card to exchange')}`;
         case 'thing-win':
             return 'Game ended, all humans was either infected or killed';
         case 'human-win':
