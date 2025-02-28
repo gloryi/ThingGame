@@ -112,7 +112,6 @@ function updateDirectionArrow(state) {
     if (arrow) {
         // arrow.innerText = "⟳";
         arrow.innerText = state.direction === 1 ? "↻" : "↺";
-        // arrow.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
     }
 }
 
@@ -213,39 +212,6 @@ function renderPlayerHand(state, player, index, hand, is_self, self_name) {
     }
 }
 
-// function localise(message){
-//     logToServer(message);
-//         switch(message) {
-//             case 'Confirm':
-//                 if(lang==="Ru"){
-//                     return "Подтвердить";
-//                 } else {
-//                     return message;
-//                 };
-//                 case 'Draw Card':
-//                     if(lang==="Ru"){
-//                         return "Взять карту";
-//                     } else {
-//                         return message;
-//                     };
-//                 case 'Play Selected':
-//                         if(lang==="Ru"){
-//                             return "Сыграть карту";
-//                         } else {
-//                             return message;
-//                         };
-//                 case 'Discard Selected':
-//                             if(lang==="Ru"){
-//                                 return "Сбросить карту";
-//                             } else {
-//                                 return message;
-//                             };
-//             default:
-//                 return message;
-//         }
-
-// };
-
 
 const translations = {
     "Ru": {
@@ -322,17 +288,17 @@ function getHintText(state) {
     
     switch(state.phase) {
         case 'draw':
-            return `${currentPlayer.nickname} ${localise('should draw a card')}`;
+            return `${currentPlayer.nickname} ${localise('should draw a card')}` + `${state.is_crashed? " Also someone just throwed exception!!!1!111" : ""}`;
         case 'action':
-            return `${currentPlayer.nickname} - ${localise('select card to play or discard')}`;
+            return `${currentPlayer.nickname} - ${localise('select card to play or discard')}` + `${state.is_crashed? " Also someone just throwed exception!!!1!111" : ""}`;
         case 'exchange':
-            return `${state.exchange_comment[0]} x ${state.exchange_comment[1]} - ${localise('select card to exchange')}`;
+            return `${state.exchange_comment[0]} x ${state.exchange_comment[1]} - ${localise('select card to exchange')}` + `${state.is_crashed? " Also someone just throwed exception!!!1!111" : ""}`;
         case 'thing-win':
-            return 'Game ended, all humans was either infected or killed';
+            return 'Game ended, all humans was either infected or killed' + `${state.is_crashed? " Also someone just throwed exception!!!1!111" : ""}`;
         case 'human-win':
-            return 'The thing was killed, humans win. (There are still could be someone infected among you).'
+            return 'The thing was killed, humans win. (There are still could be someone infected among you).' + `${state.is_crashed? " Also someone just throwed exception!!!1!111" : ""}`
         case 'post-action':
-            return `${currentPlayer.nickname} - confirming played action, targeted player could react`
+            return `${currentPlayer.nickname} - confirming played action, targeted player could react` + `${state.is_crashed? " Also someone just throwed exception!!!1!111" : ""}`
         default:
             return 'Waiting for players...';handlePlayerClick
     }
@@ -364,7 +330,6 @@ function handlePlayerClick(playerIndex) {
 
 function handleAction(actionType) {
     if ((gameState.phase === 'exchange' || gameState.phase == "action" || actionType === "card_selection") && selectedCardIndex === null) {
-        // logToServer('No card selected for action');
         return;
     }
 

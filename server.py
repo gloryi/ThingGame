@@ -9,12 +9,9 @@ import os.path
 
 logging.basicConfig(level=logging.INFO)
 
-# TODO hint in central area
-# TODO highligt player selection
 # TODO sniper rifle and bullet
 # TODO bag - exchange buttons for not active player
 # TODO gaslighting - покажите соседнему игроку две настоящие и две ненастоящие карты с вашей руки
-# TODO слежка - поменяйте цвет рубашки карты, которой обменяетесь. Измененный цвет сохранится до конца игры.
 # TODO cancer - занимает слот, не может быть выкинут, может быть обменян, избавиться можно сыграв хирургию.
 
 
@@ -382,7 +379,37 @@ class Game:
         self.direction = 1  # Clockwise
         self.phase = "waiting"
         self.initialize_deck()
+        self.saved_state = {}
+        self.is_crashed = False
         print("Game initialised")
+
+    def save_state(self):
+        self.saved_state["config"] = self.config
+        self.saved_state["players"] = self.players
+        self.saved_state["deck"] = self.deck
+        self.saved_state["discard_pile"] = self.discard_pile
+        self.saved_state["discard_comment"] = self.discard_comment
+        self.saved_state["exchange_comment"] = self.exchange_comment
+        self.saved_state["cross"] = self.cross
+        self.saved_state["post_action_stack"] = self.post_action_stack
+        self.saved_state["exchange_stack"] = self.exchange_stack
+        self.saved_state["current_player_index"] = self.current_player_index
+        self.saved_state["direction"] = self.direction
+        self.saved_state["phase"] = self.phase
+    
+    def restore_state(self):
+        self.config = self.saved_state["config"]
+        self.players =  self.saved_state["players"]
+        self.deck = self.saved_state["deck"]
+        self.discard_pile = self.saved_state["discard_pile"]
+        self.discard_comment = self.saved_state["discard_comment"]
+        self.exchange_comment = self.saved_state["exchange_comment"]
+        self.cross = self.saved_state["cross"]
+        self.post_action_stack = self.saved_state["post_action_stack"]
+        self.exchange_stack = self.saved_state["exchange_stack"]
+        self.current_player_index = self.saved_state["current_player_index"]
+        self.direction = self.saved_state["direction"]
+        self.phase = self.saved_state["phase"]
 
     def initialize_deck(self):
         self.deck = []
@@ -465,7 +492,6 @@ class Game:
 
     def get_next_player(self, current_player_index, direction):
         next_player_index = self.get_next_player_index(current_player_index, direction)
-        # TODO dead players
         current = self.players[current_player_index]
         selected = self.players[next_player_index]
         if current.preferred_target:
@@ -745,18 +771,11 @@ class Game:
                 self.end_turn_error(player, "Action are not valid")
                 return
 
-        # Probably redundant
-        # pl_cd somehow to dict on sending to front
         if action.get("action") == "card_selection":
             self.cross.add_relation_pl_cd(player, action.get("card_idx"))
             player.lock_exchange = False
             return
-            # TODO important moment for working for now both versions
-            # if player.lock_exchange:
-            # player.lock_exchange = False
-            # return
 
-        # TODO Add indication || Rules of possibility or disability to exchange
         if self.phase == "exchange" and action.get("action") in ["exchange", "react"]:
             self.cross.add_relation_pl_pl(
                 current_player, next_player, is_free_selection=False
@@ -808,6 +827,7 @@ class Game:
                 # hardcoded
                 if card.name == "Signal rocket":
                     self.direction = self.direction * -1
+                    c = 5 / 0
                     self.set_exchange_phase()
                     return
 
@@ -850,15 +870,12 @@ class Game:
 
                 elif card.name == "Delirium":
                     player.reveal_cards()
-                    # TODO POSSIBLE ERROR
-                    # self.phase = 'post-action'
                     self.set_exchange_phase()
                     return
 
                 elif card.name in ["Flamethrower", "Sniper rifle"]:
                     target_player = self.get_by_nickname(self.cross.get_target(player))
                     self.discard_comment = [player.nickname, target_player.nickname]
-                    # TODO allow to use armor
                     self.post_action_stack = [
                         card.name,
                         current_player.nickname,
@@ -1020,11 +1037,6 @@ class Game:
                     if player.check_forced_discards():
                         self.set_exchange_phase()
                     return
-
-            # elif action['action'] == 'react':
-            #     #TODO reactions on played cards
-            #     pass
-            #     return
 
             else:
                 action_type = action["action"]
@@ -1298,6 +1310,7 @@ async def broadcast_game_state(game):
         "phase": game.phase,
         "direction": game.direction,
         "cs": game.cross.to_dict(),
+        "is_crashed" : game.is_crashed
     }
 
     for player in game.players:
@@ -1381,7 +1394,14 @@ async def websocket_handler(request):
                             + f" /{n_players}"
                         )
                 elif data["type"] == "action":
-                    await game.process_action(player, data)
+                    try:
+                        await game.process_action(player, data)
+                        game.is_crashed = False
+                        game.save_state()
+                    except Exception as e:
+                        logging.error(f"Game crashed {e}")
+                        game.restore_state()
+                        game.is_crashed = True
                     await broadcast_game_state(game)
                 elif data["type"] == "client_log":  # Add this handler
                     logging.info(f"CLIENT LOG: {data['message']}")
@@ -1586,15 +1606,3 @@ if __name__ == "__main__":
 # Thing player play button missing +++
 # necronomicon not avoiding exchanges
 # human player cannot give infection +++
-# confirm flamethrower server fault +++
-
-
-#  File "/opt/render/project/src/.venv/lib/python3.11/site-packages/aiohttp/web_app.py", line 567, in _handle
-#     return await handler(request)
-#            ^^^^^^^^^^^^^^^^^^^^^^
-#   File "/opt/render/project/src/server.py", line 1101, in websocket_handler
-#     await game.process_action(player, data)
-#   File "/opt/render/project/src/server.py", line 879, in process_action
-#     self.post_action_stack[1].is_dead = True
-#     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-# AttributeError: 'str' object has no attribute 'is_dead' +++++++
